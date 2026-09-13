@@ -141,6 +141,14 @@ def get_filepaths_and_labels(split: str):
     if len(paths) == 0:
         print(f"[!] No images found for split='{split}'. "
               f"Have you placed images under {cfg.IMAGES_DIR}? See data/README_DATA.md.")
+
+    if cfg.MAX_SAMPLES_PER_SPLIT is not None and len(paths) > cfg.MAX_SAMPLES_PER_SPLIT:
+        rng = np.random.RandomState(cfg.SEED)
+        idx = rng.choice(len(paths), size=cfg.MAX_SAMPLES_PER_SPLIT, replace=False)
+        paths = [paths[i] for i in idx]
+        labels = [labels[i] for i in idx]
+        print(f"[{split}] capped to {len(paths)} images (config.MAX_SAMPLES_PER_SPLIT).")
+
     return paths, labels
 
 

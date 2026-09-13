@@ -10,24 +10,29 @@ via an ablation study (Experiments 1–5).
 
 ---
 
-## ⚠️ Read this first — what is and isn't included
+## Status — what's verified vs. what's still pending
 
-This repo is a **complete, runnable codebase**, not a set of pretrained results. Specifically:
+This repo is a **complete, runnable codebase**, and the full pipeline (data loading, all four
+model architectures, training loop, metrics, checkpointing) has been **verified end-to-end on
+the real OASIS dataset** (Kaggle: shreyanmohanty/oasis-alzheimers-detection-multi-class-dataset,
+~55k train / ~46k test images after Roboflow augmentation) — a 200-image-capped, 3-epoch run
+completed cleanly with train accuracy rising 25.3% → 36.5% and loss falling 1.59 → 1.38,
+confirming real images load correctly, labels align with folders, and the model learns.
 
-- **The MRI images are not included.** Only `data/oasis_train_patients_metadata.csv` and
-  `data/oasis_test_patients_metadata.csv` (patient ID, demographics, CDR, class label) were
-  provided. You need to download the actual OASIS scans from Kaggle yourself (link below) and
-  place them under `data/images/` — see `data/README_DATA.md`.
-- **No GPU was used to produce this repo.** I have no GPU and no access to Kaggle in this
-  environment, so nothing here has been trained end-to-end on real MRI data. Every module has
-  been sanity-checked on synthetic dummy tensors of the right shape (see
-  `tests/smoke_test.py`), so the code runs and shapes line up — but real accuracy/F1/AUC numbers
-  can only come from you running it with the real dataset and a GPU (a free Colab T4 is enough
-  for 128×128 grayscale).
-- I'm telling you this plainly so you don't cite numbers that were never actually produced.
+What's still pending, honestly:
+- **Full-scale results.** The verified run above was intentionally capped
+  (`config.MAX_SAMPLES_PER_SPLIT`) to a few minutes for validation speed. The real 40-epoch,
+  full-dataset, 4-experiment ablation study has not been completed yet — it requires a GPU
+  (CPU-only, one epoch on the full ~55k-image training set takes on the order of 10 hours; see
+  the note on dataset size below).
+- **Train/test leakage check.** This Kaggle release is a Roboflow-augmented export — the same
+  original scan can appear as multiple augmented copies, potentially split across both train and
+  test folders. This hasn't been audited yet and should be addressed (or at least disclosed)
+  before citing final numbers, since it can inflate test accuracy if present.
 
-Once you drop images in and run `notebooks/01`–`08` in order, everything (training, metrics,
-ablation table, Grad-CAM/SHAP/LIME) will actually execute and produce real numbers from your data.
+Once the full ablation completes (recommended: Google Colab's free T4 GPU — this exact code runs
+there unchanged), replace this section with the real accuracy/F1/AUC numbers from
+`results/ablation_table.csv`.
 
 ## Dataset
 
@@ -35,7 +40,9 @@ Kaggle: "OASIS Alzheimer's Detection Multi-Class Dataset (MRI Images)", source O
 https://www.kaggle.com/datasets/shreyanmohanty/oasis-alzheimers-detection-multi-class-dataset
 
 Classes (4-way, matching the base paper): `NonDemented`, `VeryMildDemented`, `MildDemented`,
-`ModerateDemented`.
+`ModerateDemented`. Note: this Kaggle release is a Roboflow-exported, augmented version (~55k
+train / ~46k test images) — much larger than the original OASIS-1 patient count (~400 scans),
+because each original scan was expanded into multiple augmented copies before export.
 
 ## Setup
 

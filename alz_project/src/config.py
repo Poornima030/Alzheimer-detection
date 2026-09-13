@@ -38,6 +38,11 @@ LEARNING_RATE = 1e-3
 VAL_SPLIT = 0.15          # carved out of the training CSV
 SEED = 42
 
+# Set to an integer (e.g. 500) to cap how many images per split are used — lets you run a
+# fast end-to-end validation pass on real data (minutes, not hours) before committing to a
+# full run. Set to None to use the full dataset.
+MAX_SAMPLES_PER_SPLIT = None
+
 # ---- SSL pretraining ---------------------------------------------------------
 SSL_EPOCHS = 30
 SSL_BATCH_SIZE = 64
