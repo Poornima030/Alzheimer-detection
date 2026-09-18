@@ -1,0 +1,9 @@
+{
+  "experiment": "cbam_transformer_ssl",
+  "accuracy": 0.0185,
+  "precision_macro": 0.022987541380267568,
+  "recall_macro": 0.26146788990825687,
+  "f1_macro": 0.021521972165452485,
+  "roc_auc_macro": 0.6362629117993936,
+  "note": "Reduced-scale validation run (2000 images, 3 SSL epochs, 8 supervised epochs) due to time constraints. Result is not representative of the full architecture -- collapsed, likely due to non-stratified random subsampling. Full-scale run recommended before citing this experiment's performance."
+}

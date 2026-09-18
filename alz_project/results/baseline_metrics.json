@@ -1,0 +1,8 @@
+{
+  "experiment": "baseline",
+  "accuracy": 0.599601593625498,
+  "precision_macro": 0.29824057409945853,
+  "recall_macro": 0.44502099885365476,
+  "f1_macro": 0.2708017951968533,
+  "roc_auc_macro": 0.8167330531925012
+}

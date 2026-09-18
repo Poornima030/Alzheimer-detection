@@ -53,22 +53,33 @@ def nt_xent_loss(z1, z2, temperature=None):
     return tf.reduce_mean(loss)
 
 
-def pretrain_ssl(unlabeled_dataset, epochs=None, learning_rate=1e-3, verbose=True):
+def pretrain_ssl(unlabeled_dataset=None, epochs=None, learning_rate=1e-3, verbose=True):
     """
-    unlabeled_dataset: tf.data.Dataset yielding single images (no labels), e.g. from
-                        data_loader.get_unlabeled_dataset_for_ssl()
+    unlabeled_dataset: kept as a parameter for backward compatibility with existing callers
+                        (e.g. train.py), but this implementation rebuilds its own augmented-pair
+                        pipeline internally via tf.data (faster than per-batch tf.map_fn calls,
+                        and prints step-level progress instead of only per-epoch).
     Returns the pretrained backbone_model (input -> multiscale-pooled features).
     """
+    from ..data_loader import get_filepaths_and_labels
+    from ..preprocessing import load_and_preprocess_image
+    from ..augmentation import ssl_augment_pair
+
     epochs = epochs or cfg.SSL_EPOCHS
+    train_paths, _ = get_filepaths_and_labels("train")
+
+    paths_ds = tf.data.Dataset.from_tensor_slices(train_paths)
+    paths_ds = paths_ds.shuffle(buffer_size=len(train_paths), seed=cfg.SEED)
+    paths_ds = paths_ds.map(load_and_preprocess_image, num_parallel_calls=tf.data.AUTOTUNE)
+    paired_ds = paths_ds.map(ssl_augment_pair, num_parallel_calls=tf.data.AUTOTUNE)
+    paired_ds = paired_ds.batch(cfg.SSL_BATCH_SIZE, drop_remainder=True)
+    paired_ds = paired_ds.prefetch(tf.data.AUTOTUNE)
+
     ssl_model, backbone_model = build_ssl_model()
     optimizer = tf.keras.optimizers.Adam(learning_rate)
 
     @tf.function
-    def train_step(batch):
-        view1, view2 = ssl_augment_pair(batch) if batch.shape[0] is None else (
-            tf.map_fn(lambda im: ssl_augment_pair(im)[0], batch),
-            tf.map_fn(lambda im: ssl_augment_pair(im)[1], batch),
-        )
+    def train_step(view1, view2):
         with tf.GradientTape() as tape:
             z1 = ssl_model(view1, training=True)
             z2 = ssl_model(view2, training=True)
@@ -77,16 +88,20 @@ def pretrain_ssl(unlabeled_dataset, epochs=None, learning_rate=1e-3, verbose=Tru
         optimizer.apply_gradients(zip(grads, ssl_model.trainable_variables))
         return loss
 
+    steps_per_epoch = len(train_paths) // cfg.SSL_BATCH_SIZE
     history = []
     for epoch in range(epochs):
-        epoch_losses = []
-        for batch in unlabeled_dataset:
-            loss = train_step(batch)
-            epoch_losses.append(float(loss))
-        mean_loss = sum(epoch_losses) / max(len(epoch_losses), 1)
+        losses = []
+        for step, (v1, v2) in enumerate(paired_ds):
+            loss = train_step(v1, v2)
+            losses.append(float(loss))
+            if verbose and step % 50 == 0:
+                print(f"[SSL] epoch {epoch + 1}/{epochs} step {step}/{steps_per_epoch} "
+                      f"loss={float(loss):.4f}")
+        mean_loss = sum(losses) / max(len(losses), 1)
         history.append(mean_loss)
         if verbose:
-            print(f"[SSL] epoch {epoch + 1}/{epochs}  NT-Xent loss = {mean_loss:.4f}")
+            print(f"[SSL] epoch {epoch + 1}/{epochs} DONE — mean NT-Xent loss = {mean_loss:.4f}")
 
     return backbone_model, history
 

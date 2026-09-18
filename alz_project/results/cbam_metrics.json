@@ -1,0 +1,8 @@
+{
+  "experiment": "cbam",
+  "accuracy": 0.8176641261042785,
+  "precision_macro": 0.3245441296289477,
+  "recall_macro": 0.4108516407900739,
+  "f1_macro": 0.3161798445600272,
+  "roc_auc_macro": 0.8672714585831743
+}
